@@ -4,6 +4,7 @@ import cors from "cors";
 import { MongoClient } from "mongodb";
 import dotenv from "dotenv";
 import joi from "joi";
+import { v4 as uuidV4 } from "uuid";
 
 const app = express();
 app.use(cors());
@@ -21,6 +22,7 @@ try {
 
 const db = mongoClient.db("backWallet");
 const userCollection = db.collection("users");
+const sessionsCollection = db.collection("sessions");
 
 const newUserSchema = joi.object({
   name: joi.string().min(5).required(),
@@ -30,6 +32,7 @@ const newUserSchema = joi.object({
 
 export async function loginUser(req, res) {
   const { email, password } = req.body;
+  const token = uuidV4();
 
   try {
     const userExists = await userCollection.findOne({ email });
@@ -46,7 +49,12 @@ export async function loginUser(req, res) {
       return res.sendStatus(401);
     }
 
-    res.send({ message: `olá ${userExists.name}, seja bem vindo(a)` });
+    await db.collection("sessions").insertOne({
+      token,
+      userId: userExists._id,
+    });
+
+    res.send(token);
   } catch (err) {
     console.log(err);
     res.sendStatus(500);
@@ -85,6 +93,17 @@ export async function getUsers(req, res) {
   try {
     const users = await userCollection.find().toArray();
     res.send(users);
+  } catch (err) {
+    console.log(err);
+    res.sendStatus(500);
+  }
+}
+
+export async function getSession(req, res) {
+  try {
+    const session = await sessionsCollection.find().toArray();
+    console.log(session);
+    res.send(session);
   } catch (err) {
     console.log(err);
     res.sendStatus(500);

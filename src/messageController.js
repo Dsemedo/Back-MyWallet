@@ -21,6 +21,8 @@ try {
 const db = mongoClient.db("backWallet");
 const outputsCollection = db.collection("outputMoney");
 const inputsCollection = db.collection("inputMoney");
+const sessionsCollection = db.collection("sessions");
+const userCollection = db.collection("users");
 
 const moneySchema = joi.object({
   moneyValue: joi.number().required(),
@@ -28,9 +30,26 @@ const moneySchema = joi.object({
 });
 
 export async function getInputs(req, res) {
+  const { authorization } = req.headers;
+  const token = authorization?.replace("Bearer ", "");
+
   try {
-    const inputs = await inputsCollection.find().toArray();
-    res.send(inputs);
+    if (!token) {
+      return res.sendStatus(401);
+    }
+
+    const session = await sessionsCollection.findOne({ token });
+
+    if (!session) {
+      return res.sendStatus(401);
+    }
+
+    const user = await userCollection.findOne({ _id: session.userId });
+
+    if (user) {
+      delete user.password;
+      res.send(user);
+    }
   } catch (err) {
     console.log(err);
     res.sendStatus(500);

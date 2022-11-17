@@ -2,8 +2,12 @@ import express from "express";
 import cors from "cors";
 import { MongoClient } from "mongodb";
 import dotenv from "dotenv";
-import joi from "joi";
-import { loginUser, signUpUser, getUsers } from "./src/userController.js";
+import {
+  loginUser,
+  signUpUser,
+  getUsers,
+  getSession,
+} from "./src/userController.js";
 import {
   getInputs,
   getOutputs,
@@ -38,6 +42,8 @@ app.get("/outputs", getOutputs);
 app.post("/inputs", postInputs);
 
 app.post("/outputs", postOutputs);
+
+app.get("/sessions", getSession);
 
 app.get("/statement", (req, res) => {});
 
