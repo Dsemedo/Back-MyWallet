@@ -11,6 +11,7 @@ import {
 import {
   getInputs,
   getOutputs,
+  getStatement,
   postInputs,
   postOutputs,
 } from "./src/messageController.js";
@@ -18,9 +19,14 @@ import {
 const app = express();
 app.use(cors());
 app.use(express.json());
-
 dotenv.config();
+
 const mongoClient = new MongoClient(process.env.MONGO_URI);
+const db = mongoClient.db("backWallet");
+export const userCollection = db.collection("users");
+export const sessionsCollection = db.collection("sessions");
+export const outputsCollection = db.collection("outputMoney");
+export const inputsCollection = db.collection("inputMoney");
 
 try {
   await mongoClient.connect();
@@ -45,7 +51,7 @@ app.post("/outputs", postOutputs);
 
 app.get("/sessions", getSession);
 
-app.get("/statement", (req, res) => {});
+app.get("/statement", getStatement);
 
 app.listen(5000, () => {
   console.log("Servidor rodando na porta 5000");

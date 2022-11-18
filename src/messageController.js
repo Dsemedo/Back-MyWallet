@@ -1,36 +1,58 @@
-import express from "express";
-import cors from "cors";
-import { MongoClient } from "mongodb";
-import dotenv from "dotenv";
+import { ObjectId } from "mongodb";
 import joi from "joi";
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-dotenv.config();
-const mongoClient = new MongoClient(process.env.MONGO_URI);
-
-try {
-  await mongoClient.connect();
-  console.log("Mongodb conectado");
-} catch (err) {
-  console.log(err);
-}
-
-const db = mongoClient.db("backWallet");
-const outputsCollection = db.collection("outputMoney");
-const inputsCollection = db.collection("inputMoney");
-const sessionsCollection = db.collection("sessions");
-const userCollection = db.collection("users");
+import dayjs from "dayjs";
+import {
+  userCollection,
+  inputsCollection,
+  outputsCollection,
+  sessionsCollection,
+} from "../index.js";
 
 const moneySchema = joi.object({
   moneyValue: joi.number().required(),
   description: joi.string(),
 });
 
+export async function postInputs(req, res) {
+  const { authorization } = req.headers;
+  const { moneyValue, description } = req.body;
+  const now = dayjs().format("DD/MM/YYYY");
+
+  const { error } = moneySchema.validate(req.body, { abortEarly: false });
+
+  if (error) {
+    const errors = error.details.map((detail) => detail.message);
+    return res.status(401).send(errors);
+  }
+
+  const token = authorization?.replace("Bearer ", "");
+
+  if (!token) {
+    return res.sendStatus(401);
+  }
+
+  try {
+    const session = await sessionsCollection.findOne({ token });
+    console.log(session);
+
+    const user = await userCollection.findOne({ _id: session.userId });
+
+    await inputsCollection.insertOne({
+      moneyValue,
+      description,
+      userId: user._id,
+      now,
+    });
+
+    res.sendStatus(201);
+  } catch (err) {
+    res.sendStatus(500);
+  }
+}
+
 export async function getInputs(req, res) {
   const { authorization } = req.headers;
+
   const token = authorization?.replace("Bearer ", "");
 
   try {
@@ -39,26 +61,70 @@ export async function getInputs(req, res) {
     }
 
     const session = await sessionsCollection.findOne({ token });
-
-    if (!session) {
-      return res.sendStatus(401);
-    }
-
     const user = await userCollection.findOne({ _id: session.userId });
 
-    if (user) {
-      delete user.password;
-      res.send(user);
-    }
+    const inputs = await inputsCollection.find({ userId: user._id }).toArray();
+
+    res.send(inputs);
   } catch (err) {
     console.log(err);
     res.sendStatus(500);
   }
 }
 
-export async function getOutputs(req, res) {
+export async function postOutputs(req, res) {
+  const { authorization } = req.headers;
+  const { moneyValue, description } = req.body;
+  const now = dayjs().format("DD/MM/YYYY");
+
   try {
-    const outputs = await outputsCollection.find().toArray();
+    const { error } = moneySchema.validate(req.body, { abortEarly: false });
+
+    if (error) {
+      const errors = error.details.map((detail) => detail.message);
+      return res.status(401).send(errors);
+    }
+
+    const token = authorization?.replace("Bearer ", "");
+
+    if (!token) {
+      return res.sendStatus(401);
+    }
+
+    const session = await sessionsCollection.findOne({ token });
+    const user = await userCollection.findOne({ _id: session.userId });
+
+    await outputsCollection.insertOne({
+      moneyValue,
+      description,
+      userId: user._id,
+      now,
+    });
+
+    res.sendStatus(201);
+  } catch (err) {
+    res.sendStatus(500);
+  }
+}
+
+export async function getOutputs(req, res) {
+  const { authorization } = req.headers;
+
+  const token = authorization?.replace("Bearer ", "");
+  try {
+    if (!token) {
+      res.sendStatus(401);
+    }
+
+    const sessions = await sessionsCollection.findOne({ token });
+    console.log(sessions);
+
+    const user = await userCollection.findOne({ _id: sessions.userId });
+
+    const outputs = await outputsCollection
+      .find({ userId: user._id })
+      .toArray();
+
     res.send(outputs);
   } catch (err) {
     console.log(err);
@@ -66,46 +132,26 @@ export async function getOutputs(req, res) {
   }
 }
 
-export async function postInputs(req, res) {
-  const { email } = req.headers;
-  const { moneyValue, description } = req.body;
+export async function getStatement(req, res) {
+  const { authorization } = req.headers;
 
-  try {
-    const { error } = moneySchema.validate(req.body, { abortEarly: false });
+  const token = authorization?.replace("Bearer ", "");
 
-    if (error) {
-      const errors = error.details.map((detail) => detail.message);
-      return res.status(401).send(errors);
-    }
-
-    if (email) {
-      await inputsCollection.insertOne({ email, moneyValue, description });
-    }
-
-    res.sendStatus(201);
-  } catch (err) {
-    console.log(err);
+  if (!token) {
+    return res.sendStatus(401);
   }
-}
-
-export async function postOutputs(req, res) {
-  const { email } = req.headers;
-  const { moneyValue, description } = req.body;
 
   try {
-    const { error } = moneySchema.validate(req.body, { abortEarly: false });
+    const sessions = await sessionsCollection.findOne({ token });
+    const user = await userCollection.findOne({ _id: sessions.userId });
 
-    if (error) {
-      const errors = error.details.map((detail) => detail.message);
-      return res.status(401).send(errors);
-    }
+    const inputs = await inputsCollection.find({ userId: user._id }).toArray();
+    const outputs = await outputsCollection
+      .find({ userId: user._id })
+      .toArray();
 
-    if (email) {
-      await outputsCollection.insertOne({ email, moneyValue, description });
-    }
-
-    res.sendStatus(201);
+    res.send({ outputs, inputs });
   } catch (err) {
-    console.log(err);
+    return res.sendStatus(500);
   }
 }
