@@ -1,4 +1,3 @@
-import { ObjectId } from "mongodb";
 import joi from "joi";
 import dayjs from "dayjs";
 import {
@@ -150,7 +149,7 @@ export async function getStatement(req, res) {
       .find({ userId: user._id })
       .toArray();
 
-    res.send({ outputs, inputs });
+    res.send({ outputs, inputs, name: user.name });
   } catch (err) {
     return res.sendStatus(500);
   }

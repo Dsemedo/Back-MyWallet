@@ -49,6 +49,14 @@ export async function loginUser(req, res) {
         .send({ message: "Este usuário não está cadastrado" });
     }
 
+    // const sessionExists = await sessionsCollection.findOne({
+    //   userId: userExists._id,
+    // });
+    // if (sessionExists) {
+    //   await sessionsCollection.deleteOne({ userId: userExists._id });
+    //   return res.send(200);
+    // }
+
     const passwordOk = bcrypt.compareSync(password, userExists.password);
     if (!passwordOk) {
       return res.sendStatus(401);
@@ -59,8 +67,7 @@ export async function loginUser(req, res) {
       userId: userExists._id,
     });
 
-    console.log(userExists);
-    res.send(token);
+    res.send({ token, name: userExists.name });
   } catch (err) {
     console.log(err);
     res.sendStatus(500);
@@ -87,4 +94,3 @@ export async function getSession(req, res) {
     res.sendStatus(500);
   }
 }
-
