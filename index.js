@@ -9,8 +9,6 @@ import {
   getSession,
 } from "./src/userController.js";
 import {
-  getInputs,
-  getOutputs,
   getStatement,
   postInputs,
   postOutputs,
@@ -25,8 +23,7 @@ const mongoClient = new MongoClient(process.env.MONGO_URI);
 const db = mongoClient.db("backWallet");
 export const userCollection = db.collection("users");
 export const sessionsCollection = db.collection("sessions");
-export const outputsCollection = db.collection("outputMoney");
-export const inputsCollection = db.collection("inputMoney");
+export const transactionsCollection = db.collection("transactions");
 
 try {
   await mongoClient.connect();
@@ -40,10 +37,6 @@ app.post("/login", loginUser);
 app.post("/sign-up", signUpUser);
 
 app.get("/users", getUsers);
-
-app.get("/inputs", getInputs);
-
-app.get("/outputs", getOutputs);
 
 app.post("/inputs", postInputs);
 
