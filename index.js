@@ -7,6 +7,7 @@ import {
   signUpUser,
   getUsers,
   getSession,
+  deleteSession,
 } from "./src/userController.js";
 import {
   getStatement,
@@ -45,6 +46,8 @@ app.post("/outputs", postOutputs);
 app.get("/sessions", getSession);
 
 app.get("/statement", getStatement);
+
+app.delete("/statement", deleteSession);
 
 app.listen(5000, () => {
   console.log("Servidor rodando na porta 5000");

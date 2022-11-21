@@ -4,9 +4,10 @@ import joi from "joi";
 import { userCollection, sessionsCollection } from "../index.js";
 
 const newUserSchema = joi.object({
-  name: joi.string().min(5).required(),
+  name: joi.string().min(3).required(),
   email: joi.string().email().required(),
   password: joi.string().required(),
+  confirmPassword: joi.ref("password"),
 });
 
 export async function signUpUser(req, res) {
@@ -49,14 +50,6 @@ export async function loginUser(req, res) {
         .send({ message: "Este usuário não está cadastrado" });
     }
 
-    // const sessionExists = await sessionsCollection.findOne({
-    //   userId: userExists._id,
-    // });
-    // if (sessionExists) {
-    //   await sessionsCollection.deleteOne({ userId: userExists._id });
-    //   return res.send(200);
-    // }
-
     const passwordOk = bcrypt.compareSync(password, userExists.password);
     if (!passwordOk) {
       return res.sendStatus(401);
@@ -92,5 +85,23 @@ export async function getSession(req, res) {
   } catch (err) {
     console.log(err);
     res.sendStatus(500);
+  }
+}
+
+export async function deleteSession(req, res) {
+  const { authorization } = req.headers;
+  const token = authorization?.replace("Bearer ", "");
+
+  try {
+    const session = await sessionsCollection.findOne({ token });
+    if (!session) {
+      res.sendStatus(404);
+      return;
+    }
+
+    await sessionsCollection.deleteOne({ _id: session._id });
+    res.sendStatus(201);
+  } catch (err) {
+    console.log(err);
   }
 }
